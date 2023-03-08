@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "poc-bucket-378718",
+  "private_key_id": "8d4f09c55e0a4870addeefdd52a9d0a1120b3276",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCTH370hWmoswZI\nXt0ILmc+/uehJIDhhlfYHJTbiDyVBeYHs7bqF+2HB+K6HnvK27FsCiFkddkHLzAo\nesAKZgsHKuXNdIzwmFD6PNLb9rmxBqjhFE7e9Khuy7xdeoVL/sbr2eS6FDlnYC5h\nIXJV6qOpsNXCK5vZZckZF/jOex/dMeQop12LUup7M898R3/yKS1yp+GBzd6vHgO3\nNHBOWNEQ7hI6+7x+AjB5L0x6FZj6Ne0VcV0cyBJvOMD0nEXR0M99Ze6OGeoGQ6GB\nJKvYmraI+x/0qd0cntSnKqlkSVAiVRrlNCmTuEoqLJPAyQb2E/NC3uYJCmX4jQeb\nkW5AorNBAgMBAAECggEAEgGX0yuE6/3FNhROLxMm1cHy7Xj/QRrlI3EUEu5Qo9iN\n98FaELqO+qjPagITGpfa1iNDRP1ba5Kt7TZgzKUCkoUAjS3Hlia+OnI5SGyg+3aa\nMrn+kTEWcEEFM9er+soa5IDNiqyw/eL6qi6ixLsr/rfC4bneoDPh8e1KKVNOag7i\niEYXJ1rJx3UvJvyrVEy/LLo+5atQ5CbshRXbMRzTBtfjrz58eJH6KSIxUk4wCZAv\nJZjX4Jrw9aFUc4eh1vZ6aWpwxP0LPPHYCvxOpwo1kJqnK8lla+OTkOoy9CYjHqAs\nt2CgS79UAIGokRotU2xUKTv9E10AgMvAR7z8GYiP8QKBgQDO/JzmrBT+9R0HJEjr\nbv5NXWOi7inEDmy7FteWq1EWIe39APoQ/mDsVUTDrFQQN22mrS9y2Cue0S/pXD5T\n5uU+d5ApuKeIxTVSkKow1y+MPNJ3yq89aWw9Qu2iL86sxEAdqgkhmp1RJNRpzzo4\nk5I9x1bAKzqqrvOcFmEdpdqUhQKBgQC19fyhh6I6egadD1Owyoeb1MAfjo8+rZey\nhi3sqO8meE579ex8lHT5nMWHalpGOTdid/XoTor5tga7rEewBgnwU/h84YRfmEfC\nCOIXk0/jtGwSNSGuwV5VgDRZ44lf99AijjQCkTrlnv/6G9rhe8NwC/rYTH6SqiND\ng30cRwMujQKBgQDLjO67heTL6b5XJJ61MJzS9hEizDW0gT76KXdvyx/dtRY2ZXyF\ns7MbFqueBd1RaUDi1ZNAzEbxUuRcCAOfPQSaDrht3xKaVN2gSXWkvCkdLz8G4QK+\nUOtJv4Szp3IGwqQOyAVcz5D/mElvmIO32Z/KMzsjlh+GdLBLAlMU9eJjhQKBgDIG\nuTgntCBjoCHaLuYyKGpdaZzDcvqGe2hnn4SrRWTMOre1+xidMDPYOC5svPkFjgaS\neJcv0OGqe9tpGCR65IygaXbcAarOkRv1mUNmCtbNqdCvrtz+6NKU9s+n0QMDfMOj\nWQVDrG+o8TNwKRNJFYheos6I6VulTyCmq+T0WRmZAoGBAKaAVFqPT56Yrr6nelym\nCPlZEbFEYb1hPRA8H5FHvxN0GqpgM0M5ZhUqap1iUtPr8+CHK8Y83teloF6asfi7\nGCrXyBGy9Hk+Mlz743kg+zJ3Gt16TSccEQK+b+RbsEEnUPY9cM/B7kBa6YlGlumX\n3lDMLnLv6Lr2MC6GzpDmiHGD\n-----END PRIVATE KEY-----\n",
+  "client_email": "test11@poc-bucket-378718.iam.gserviceaccount.com",
+  "client_id": "113439078154151920922",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test11%40poc-bucket-378718.iam.gserviceaccount.com"
+}
