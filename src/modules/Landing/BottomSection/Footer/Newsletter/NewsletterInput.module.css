@@ -1,0 +1,26 @@
+.input_container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #a0a3f2 0deg,
+    #ebf1f8 56.25deg,
+    #f9fbfd 129.37deg,
+    #ebf1f8 168.75deg,
+    #c7def6 223.13deg,
+    #7b7bed 247.5deg,
+    #d9ebf9 281.25deg,
+    #eff5fb 316.87deg,
+    #a0a3f2 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.input_inner_container {
+  border-radius: 1.5rem;
+}

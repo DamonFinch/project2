@@ -22,7 +22,10 @@ export const notification = createSlice({
     setNewPosts: (state, action: PayloadAction<INewPostData>) => {
       const newPost = action.payload
       const tempNewPosts = state.newPosts ? state.newPosts : []
-      state.newPosts = [...tempNewPosts, newPost]
+      const findNewUser = tempNewPosts.find(
+        element => element.user._id == newPost.user._id
+      )
+      if (!findNewUser) state.newPosts = [...tempNewPosts, newPost]
     },
     removeNewPost: (
       state,
@@ -34,13 +37,13 @@ export const notification = createSlice({
       const tempNewPosts = [...state.newPosts]
 
       tempNewPosts.splice(
-        tempNewPosts.findIndex((post) => post.postId === postId),
+        tempNewPosts.findIndex(post => post.postId === postId),
         1
       )
 
       state.newPosts = [...tempNewPosts]
     },
-    removeAllPosts: (state) => {
+    removeAllPosts: state => {
       state.newPosts = []
     }
   }

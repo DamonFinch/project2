@@ -1,18 +1,24 @@
 import React, { useState } from 'react'
-import axios from 'axios'
-import { useMutation } from 'react-query'
 import { toast } from 'react-toastify'
 
 import { useAppDispatch, useAppSelector } from 'store/hooks'
 import {
   setSelectedAccount,
   setAccounts,
-  toggleIsLoginModalVisible
+  toggleIsLoginModalVisible,
+  toggleIsForgotModalVisible,
+  setBalance
 } from 'store/slices/auth.slice'
-import { ENV } from 'lib/env'
-
-import Input from 'components/Input'
-import Modal from 'components/Modal'
+import lockIcon from 'assets/lock.svg'
+import userIcon from 'assets/username.svg'
+import Input from 'components/core/Input'
+import Modal from 'components/core/Modal'
+import { setTokenInCookies } from 'lib/token'
+import http from 'services/http-common'
+import Form from 'components/core/Form'
+import { loginValidation } from './Validation'
+import Button from 'components/core/Button'
+import Typography from 'components/core/Typography'
 
 interface LoginModalProps {
   isLoginVisible: boolean
@@ -35,13 +41,15 @@ function LoginModal({
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberBe, setRememberMe] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const handleUsernameChange = (value: string) => {
-    setUsername(value)
+  const handleUsernameChange = (value: any) => {
+    setUsername(value?.target?.value)
   }
 
-  const handlePasswordChange = (value: string) => {
-    setPassword(value)
+  const handlePasswordChange = (value: any) => {
+    setPassword(value?.target?.value)
   }
 
   const handleCloseModal = () => {
@@ -51,65 +59,127 @@ function LoginModal({
     isLoginVisible && toggleIsLoginVisible()
   }
 
-  const registerUser = useMutation(
-    (user: ILoginUser) => {
-      return axios.post(`${ENV.API_URL}/login`, user)
-    },
-    {
-      onSuccess: ({ data }) => {
-        dispatch(setAccounts(data.data))
-        dispatch(setSelectedAccount(data.data[0]))
+  function create({ ...value }) {
+    setLoading(true)
+    const payload: ILoginUser = {
+      username: username.trim(),
+      password: password.trim()
+    }
+    http
+      .post(`/login`, payload)
+      .then(({ data }) => {
+        const { userList, token } = data?.data
+        if (rememberBe) {
+          setTokenInCookies(token, 7)
+        } else {
+          setTokenInCookies(token, null)
+        }
+        dispatch(setAccounts(userList))
+        dispatch(setSelectedAccount(userList[0]))
+        dispatch(setBalance(userList[0]?.balance))
         handleCloseModal()
-      },
-      onError: () => {
-        toast.error('Username or password incorrect!')
-      }
-    }
-  )
-
-  function handleLoginUser() {
-    if (username && password) {
-      registerUser.mutate({
-        username,
-        password
       })
-    } else {
-      toast.error('Username & Password required!')
-    }
+      .catch(_err => {
+        toast.error('Username or password incorrect!')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   return (
     <Modal
       isVisible={isLoginVisible || isGlobalModalVisible}
-      toggleVisible={handleCloseModal}
-      hasCloseButton
+      onClose={handleCloseModal}
+      showCloseButton
     >
-      <div className='p-4 w-full h-full bg-white rounded-lg'>
-        <h2 className='mb-4'>Login</h2>
-        <Input
-          value={username}
-          onChange={handleUsernameChange}
-          type='text'
-          placeholder='Enter Username'
-          className='mb-4 md:w-[300px] w-full'
-        />
-
-        <Input
-          value={password}
-          onChange={handlePasswordChange}
-          type='password'
-          placeholder='Enter Password'
-        />
-        <div
-          className={`mt-4 cursor-pointer ${
-            registerUser.isLoading ? 'bg-slate-600' : 'bg-blue-600'
-          } px-4 py-2 rounded-md text-white flex justify-center items-center`}
-          onClick={() => !registerUser.isLoading && handleLoginUser()}
+      <div className='p-6 w-[400px] h-full rounded-lg'>
+        <p className='text-[#667085] text-[26px] mb-7'>
+          Welcome to Here!
+        </p>
+        <Form
+          onSubmit={async values => {
+            create({ ...values })
+          }}
+          validationSchema={loginValidation}
+          className='w-full mb-2'
+          initialValues={''}
         >
-          <p className='text-sm'>
-            {registerUser.isLoading ? 'Loading...' : 'Login'}
-          </p>
-        </div>
+          <div className='mb-6'>
+            <div className='mb-2'>
+              <p className='text-[#667085]'>Email</p>
+            </div>
+            <Input
+              name='username'
+              value={username}
+              onChange={handleUsernameChange}
+              className={
+                'outline-none rounded-md h-[2.2rem] lg:h-[3rem] bg-[#F2F4F5] border-none italic text-body'
+              }
+              clasNameError={'border-bottom-red'}
+              placeholder='Username or Email'
+              leftIcon={userIcon}
+              hookToForm
+            />
+          </div>
+
+          <div className='mb-6'>
+            <div className='mb-2'>
+              <p className='text-[#667085]'>Password</p>
+            </div>
+            <Input
+              name='password'
+              value={password}
+              onChange={handlePasswordChange}
+              className={
+                'outline-none rounded-md h-[2.2rem] lg:h-[3rem] bg-[#F2F4F5] border-none italic text-body'
+              }
+              type='password'
+              clasNameError={'border-bottom-red'}
+              placeholder='Password'
+              leftIcon={lockIcon}
+              hookToForm
+            />
+          </div>
+
+          <div className='mb-6'>
+            <div className='flex items-center justify-between'>
+              <label className='flex items-center gap-2'>
+                <input
+                  name='checkbox'
+                  type='checkbox'
+                  checked={rememberBe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                />
+                <div>
+                  <p className='text-grayLight'>Remember me</p>
+                </div>
+              </label>
+              <div
+                className='cursor-pointer'
+                onClick={() => {
+                  toggleIsLoginVisible()
+                  dispatch(toggleIsForgotModalVisible(true))
+                }}
+              >
+                <p className='text-grayLight underline'>
+                  Forgot my password
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type='submit'
+            size='small'
+            outlined={false}
+            className='w-full mt-2'
+          >
+            <Typography type='button'>
+              {loading ? 'Login...' : 'Login'}
+            </Typography>
+          </Button>
+        </Form>
       </div>
     </Modal>
   )

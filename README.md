@@ -7,6 +7,7 @@ The aim of this project is to develop a testing environment for the key concepts
 The overarching goal is to allow internal users, who have recognizable IDs, and the ability to switch between "zombie accounts," to perform simple tasks such as posting, commenting, upvoting/downvoting, and using their allocated credits for each account.
 
 This epic is broken down into two stories:
+
 1. The development team will create the prototype and improve its functions by integrating frontend and backend components, testing potential technologies, and creating a preliminary data structure.
 2. The content/community team will use the system to post existing content and evaluate its functions to ensure they can perform basic actions and provide personal feedback.
 

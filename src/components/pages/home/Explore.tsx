@@ -1,17 +1,10 @@
-import axios from 'axios'
-import { ENV } from 'lib/env'
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState
-} from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { BiLoaderAlt } from 'react-icons/bi'
 import { useInfiniteQuery } from 'react-query'
+import http from 'services/http-common'
 import { useAppSelector } from 'store/hooks'
 import { IPost } from 'types/interfaces'
-import EditPostModal from './EditPostModal/EditPostModal'
-import MinifiedPost from './MinifiedPost'
+import PostTicket from '../explore/PostTicket'
 
 function Explore() {
   const limit = 30
@@ -20,27 +13,10 @@ function Explore() {
   const selectedAccount = useAppSelector(
     state => state.auth.selectedAccount
   )
-  const [selectedPost, setSelectedPost] = useState<IPost | null>(null)
-  const [isEditPostModalVisible, setIsEditPostModalVisible] =
-    useState(false)
-
-  useEffect(() => {
-    if (!isEditPostModalVisible) {
-      setSelectedPost(null)
-    }
-  }, [isEditPostModalVisible])
-
-  const handleSelectedPost = (post?: IPost) => {
-    if (!post) return setSelectedPost(null)
-    setSelectedPost(post)
-  }
-
-  const toggleEditPostModal = () =>
-    setIsEditPostModalVisible(prev => !prev)
 
   const fetchExplorePosts = async (page: number) => {
-    const response = await axios.get(
-      `${ENV.API_URL}/getExplorePosts?per_page=${limit}&page=${page}`
+    const response = await http.get(
+      `/getExplorePosts?per_page=${limit}&page=${page}`
     )
     return {
       result: response.data.data
@@ -54,13 +30,14 @@ function Explore() {
     fetchNextPage,
     isFetchingNextPage
   } = useInfiniteQuery(
-    'getTrendingPosts',
+    'getExplorePosts',
     ({ pageParam = 1 }) => fetchExplorePosts(pageParam),
     {
       getNextPageParam: (lastPage, allPages) => {
         const nextPage: number = allPages.length + 1
         return lastPage.result.length === limit ? nextPage : undefined
-      }
+      },
+      enabled: false
     }
   )
 
@@ -86,7 +63,7 @@ function Explore() {
 
   return (
     <div
-      className={`w-full max-w-[40rem] px-2 md:px-0 ${
+      className={`flex flex-col gap-2 w-full max-w-[100rem] m-auto px-2 md:px-28 ${
         selectedAccount ? 'mt-2' : ''
       }`}
     >
@@ -94,21 +71,11 @@ function Explore() {
         data &&
         data.pages &&
         data.pages.map(
-          (page, pageIndex) =>
+          page =>
             page &&
             page.result &&
-            page.result.map((post: IPost, i: number) => {
-              const newIndex = pageIndex * limit + i
-              return (
-                <div key={post._id} className='w-full mb-4'>
-                  <MinifiedPost
-                    {...post}
-                    index={newIndex + 1}
-                    toggleEditPostModal={toggleEditPostModal}
-                    handleSelectedPost={handleSelectedPost}
-                  />
-                </div>
-              )
+            page.result.map((post: IPost) => {
+              return <PostTicket key={post._id} {...post} />
             })
         )}
       {hasNextPage && (
@@ -118,22 +85,17 @@ function Explore() {
               {!isFetchingNextPage ? (
                 'Load more news...'
               ) : (
-                <React.Fragment>
+                <div className='flex flex-row items-center'>
                   <span className='animate-spin rotate mr-2'>
                     <BiLoaderAlt color='white' />
                   </span>
                   Loading news...
-                </React.Fragment>
+                </div>
               )}
             </p>
           </div>
         </div>
       )}
-      <EditPostModal
-        isVisible={isEditPostModalVisible}
-        toggleVisible={toggleEditPostModal}
-        post={selectedPost}
-      />
     </div>
   )
 }

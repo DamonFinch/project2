@@ -1,0 +1,40 @@
+.item__container {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+
+.item__container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #a0a3f2 0deg,
+    #ebf1f8 56.25deg,
+    #f9fbfd 129.37deg,
+    #ebf1f8 168.75deg,
+    #c7def6 223.13deg,
+    #7b7bed 247.5deg,
+    #d9ebf9 281.25deg,
+    #eff5fb 316.87deg,
+    #a0a3f2 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.item__containerText {
+  background: linear-gradient(
+    136.64deg,
+    #112339 -28.47%,
+    #4c596a 69.56%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}

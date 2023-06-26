@@ -1,394 +1,288 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/router'
-import formatDistance from 'date-fns/formatDistance'
-import { BiEdit } from 'react-icons/bi'
-import { MdDelete, MdMoreHoriz } from 'react-icons/md'
-import { useMutation, useQueryClient } from 'react-query'
-import axios from 'axios'
-import { toast } from 'react-toastify'
-import { GoPrimitiveDot } from 'react-icons/go'
-import Link from 'next/link'
-
-import { IPost } from 'types/interfaces'
-import { useAppDispatch, useAppSelector } from 'store/hooks'
-import { toggleIsLoginModalVisible } from 'store/slices/auth.slice'
-import { ENV } from 'lib/env'
-import Avatar from 'components/Avatar'
-
-import VotesCounter from './VotesCounter'
-import Images from './Images'
+import Typography from 'components/core/Typography'
+import React, {
+  MouseEventHandler,
+  useCallback,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
+import { IPost, ITranslateDataType, IUser } from 'types/interfaces'
+import styles from './index.module.css'
+import SinglePostHeader from './Header'
+// import Translator from './Translator'
 import Buttons from './Buttons'
-import LinkDetails from './LinkDetails'
-import CreateReply from './CreateReply/CreateReply'
+import ReplyEditor from './editor'
+import Button from 'components/core/Button'
+import { replaceFileDivs, sanitizeTitle } from 'utils'
+import Link from 'next/link'
+import LinkPreview from 'components/blocks/LinkPreview'
+// @ts-ignore
+import htmlToFormattedText from 'html-to-formatted-text'
+import { useRouter } from 'next/router'
+import Translator from './Translator'
+import { useMutation } from 'react-query'
+import axios from 'axios'
+import { CloudFunctionURL } from 'const'
+import CustomImage from 'components/core/Image'
+import Avatar from 'components/Avatar'
+import { toast } from 'react-toastify'
 
-import styles from './SinglePost.module.css'
-
-interface SinglePostProps extends IPost {
-  noBorder?: boolean
-  canPushToPost?: boolean
-  totalComments: number
-  showDetails?: boolean
-  showMore?: boolean
-  showVoting?: boolean
-  hasCircle?: boolean
-  hasLine?: boolean
-  canReply?: boolean
-  parentPostId?: string
-  handleSelectedImages: (images: string[], index?: number) => void
-  toggleEditPostModal: () => void
-  handleReplySuccessCallback?: () => void
-  handleSelectedPost: (post: IPost) => void
+interface Props extends IPost {
+  commentors?: IUser[] // Latest three commentors
+  focused?: boolean // Is the focused post, i.e. the focused post will show editor, buttons, etc.
 }
 
-function SinglePost({
-  _id,
-  userId,
-  createdAt,
-  images,
-  title,
-  text,
-  upvotes,
-  downvotes,
-  totalVotes,
-  repliedTo,
-  handleSelectedImages,
-  handleSelectedPost,
-  toggleEditPostModal,
-  handleReplySuccessCallback,
-  noBorder,
-  canPushToPost,
-  totalComments,
-  preview,
-  showMore,
-  showVoting,
-  showDetails,
-  canReply,
-  hasCircle,
-  hasLine,
-  parentPostId
-}: SinglePostProps) {
+const SinglePost = (post: Props) => {
+  const {
+    _id: postId,
+    title,
+    text,
+    totalVotes,
+    preview,
+    focused = false,
+    repliedTo,
+    userId: { avatar },
+    commentors = []
+  } = post
+
+  const [isHidden, setIsHidden] = useState<boolean>(totalVotes < -3)
+  const [translatedText, setTranslatedText] =
+    useState<ITranslateDataType>()
+
+  const translations = useRef<Map<string, ITranslateDataType>>(
+    new Map()
+  )
   const router = useRouter()
-  const dispatch = useAppDispatch()
-  const queryClient = useQueryClient()
-  const { selectedAccount } = useAppSelector(state => state.auth)
 
-  const moreOptionsMenuRef = useRef<HTMLDivElement | null>(null)
-  const contentRef = useRef<HTMLDivElement | null>(null)
+  const showPost = useCallback(() => {
+    setIsHidden(false)
+  }, [])
 
-  const [height, setHeight] = useState('100px')
-  const [isMoreOptions, setIsMoreOptions] = useState(false)
-  const toggleMoreOptions = () => setIsMoreOptions(prev => !prev)
-
-  useEffect(() => {
-    if (!isMoreOptions) {
-      document.removeEventListener('mousedown', handleClickOutside)
-      return
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isMoreOptions])
-
-  function handleClickOutside(e: MouseEvent) {
-    if (!e) return
-    const target = e.target as Node
-
-    if (moreOptionsMenuRef?.current?.contains(target)) return
-    setIsMoreOptions(false)
-  }
-
-  useEffect(() => {
-    if (
-      contentRef.current &&
-      contentRef.current.scrollHeight <= 100
-    ) {
-      setHeight(contentRef.current.scrollHeight + 'px')
-    }
-  }, [contentRef, text])
-
-  const moveToPage = () => {
-    canPushToPost && router.push(`/post/${_id}`)
-  }
-
-  const deletePostQuery = useMutation(
-    () => {
-      return axios.delete(`${ENV.API_URL}/deletePost/${_id}`)
-    },
-    {
-      onSuccess: () => {
-        toast.success('Successfully deleted post!')
-        setIsMoreOptions(false)
-        if (canPushToPost) {
-          queryClient.invalidateQueries('getExplorePosts')
-          queryClient.invalidateQueries('getTrendingPosts')
-        } else {
-          router.push(parentPostId ? `/post/${parentPostId}` : '/')
-        }
-      },
-      onError: () => {
-        toast.error('There was some error deleting post!')
-      }
-    }
+  const isPreview = useMemo(
+    () =>
+      (!title || title.trim().length === 0) &&
+      sanitizeTitle(htmlToFormattedText(text)).trim().length === 0 &&
+      preview?.title,
+    [title, text, preview]
   )
 
-  const editPost = () => {
-    handleSelectedPost({
-      _id,
-      createdAt,
-      downvotes,
-      title,
-      totalVotes,
-      upvotes,
-      userId,
-      images,
-      preview,
-      text,
-      totalComments,
-      repliedTo
-    })
+  const htmlText = useMemo(
+    () => replaceFileDivs(translatedText?.text ?? text),
+    [text, translatedText]
+  )
 
-    toggleEditPostModal()
-  }
+  const onPostClick = useCallback<
+    MouseEventHandler<HTMLInputElement>
+  >(
+    e => {
+      if (!focused) {
+        router.push(`/post/${postId}`)
+      }
+    },
+    [focused, router, postId]
+  )
 
-  const deletePost = () => {
-    deletePostQuery.mutate()
-  }
+  const { mutate } = useMutation({
+    mutationFn: async (body: {
+      langCode: string
+      post_id: string
+    }) => {
+      const response = await axios.post(
+        `${CloudFunctionURL}/translatePost`,
+        body
+      )
 
-  const openLoginModal = () => {
-    dispatch(toggleIsLoginModalVisible(true))
-  }
+      // TODO: Ask henry to return errors, rather than errors packed in the valid response
+      if (response.data.status === 'error') {
+        throw 'Failed to translate the post'
+      }
 
-  return (
+      return {
+        data: response.data.result
+      }
+    },
+    onSuccess(data, context) {
+      if (data.data) {
+        if (!translations.current.has(context.langCode)) {
+          translations.current.set(context.langCode, data.data)
+        }
+
+        setTranslatedText(data.data)
+      }
+    },
+    onError() {
+      toast.error('Failed to translate the post')
+    }
+  })
+
+  const translatePost = useCallback(
+    (code: string) => {
+      // TODO: get the base language from the post meta but seems like the post meta isn't being generated
+      if (code === 'en') {
+        setTranslatedText(undefined)
+        return
+      }
+
+      if (translations.current.has(code)) {
+        setTranslatedText(translations.current.get(code))
+        return
+      }
+
+      mutate({
+        langCode: code,
+        post_id: postId
+      })
+    },
+    [mutate, postId]
+  )
+
+  return isHidden && !focused ? (
+    <div className='flex flex-row gap-1 bg-grayish border border-stroke py-[0.9375rem] items-center justify-center w-full'>
+      <Typography
+        type='body'
+        className='!text-sm !leading-[1.4rem] font-normal text-body'
+      >
+        This post has been hidden because of low value.
+      </Typography>
+
+      <Button
+        size='small'
+        variant='light'
+        className='!border-none !bg-transparent text-primary underline !p-0 !leading-[1.4rem] !text-xs'
+        onClick={showPost}
+      >
+        Show post
+      </Button>
+    </div>
+  ) : (
     <div
-      className={`relative bg-white w-full ${
-        !noBorder ? 'border-[0.0625rem] border-slate-400' : ''
-      } ${!hasLine ? 'mb-4' : ''} ${
-        canPushToPost
-          ? 'cursor-pointer transition-colors duration-300 hover:bg-slate-100'
-          : ''
-      }`}
-      onClick={moveToPage}
+      onClick={onPostClick}
+      className={`flex flex-col rounded-lg item-stretch flex-1 gap-2 no-underline ${
+        focused ? '' : 'cursor-pointer'
+      } ${repliedTo && focused ? 'mt-20' : ''}`}
     >
-      <div className='flex flex-row'>
-        {(hasCircle || hasLine) && (
-          <div className='relative flex flex-col items-center w-4 z-[1] mx-2'>
-            <div className='absolute top-0 left-0 min-h-[64px] flex items-center justify-center'>
-              <GoPrimitiveDot className='text-gray-300 text-lg' />
-            </div>
-            {hasLine && (
-              <div className='border-l-[2px] border-gray-300 h-[100%] absolute top-7 left-2' />
-            )}
-          </div>
-        )}
-        <div className='flex-1'>
-          {showDetails && (
-            <div
-              className={`flex flex-row justify-between items-center ${
-                hasLine ? 'mx-4' : 'mx-4'
-              }`}
-            >
-              <div className='flex items-center flex-1 min-h-10'>
-                {showVoting && (
-                  <div onClick={e => e.stopPropagation()}>
-                    <VotesCounter
-                      postId={_id}
-                      downvotes={downvotes}
-                      upvotes={upvotes}
-                      totalVotes={totalVotes}
-                    />
-                  </div>
-                )}
-                <Avatar
-                  imageUrl={userId.avatar}
-                  containerClassNames={`w-8 h-8 ${
-                    showVoting ? 'ml-2' : 'mt-2'
-                  }`}
-                  bg='dark'
-                />
-                <div
-                  className={`flex flex-col flex-1 ${
-                    showVoting ? 'ml-2' : 'ml-2 mt-2'
-                  }`}
-                >
-                  <h4 className='text-md'>{userId?.displayName}</h4>
+      <div className='flex flex-col items-stretch'>
+        <div className='flex flex-row items-start gap-2'>
+          <Avatar
+            imageUrl={avatar}
+            containerClassNames={`rounded-full w-[3.75rem] aspect-square hidden sm:block shrink-0 my-4 sticky ${
+              focused && repliedTo ? 'top-[8.5rem]' : 'top-[5.5rem]'
+            }`}
+            iamgeClassNames='!p-0 object-cover object-center'
+          />
 
-                  <p className='text-xs text-slate-500 flex flex-row items-center flex-wrap'>
-                    {repliedTo &&
-                      repliedTo.userId &&
-                      repliedTo.userId?.displayName && (
-                        <React.Fragment>
-                          <span>
-                            Replying to{' '}
-                            <Link href={`/post/${repliedTo._id}`}>
-                              <span className='font-bold text-blue-600'>
-                                @{repliedTo.userId?.displayName}
-                              </span>
-                            </Link>
-                          </span>
-                          <GoPrimitiveDot className='mx-1' />
-                        </React.Fragment>
-                      )}
-                    {formatDistance(new Date(createdAt), new Date(), {
-                      addSuffix: true
-                    })}
-                  </p>
-                </div>
-              </div>
-              <div>
-                {selectedAccount &&
-                  selectedAccount._id === userId?._id && (
-                    <div
-                      className='relative'
-                      ref={moreOptionsMenuRef}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <div
-                        className='cursor-pointer'
-                        onClick={() => {
-                          toggleMoreOptions()
-                        }}
-                      >
-                        <MdMoreHoriz className='text-2xl' />
-                      </div>
-                      {isMoreOptions && (
-                        <div className='z-[1] bg-white shadow-lg min-w-[7.5rem] absolute top-[1.375rem] right-0 rounded-lg py-2'>
-                          <div
-                            className='px-2 flex items-center hover:bg-slate-100 active:bg-slate-200'
-                            onClick={editPost}
-                          >
-                            <BiEdit className='text-lg' />
-                            <p className='text-sm px-2 py-3 cursor-pointer'>
-                              Edit
-                            </p>
-                          </div>
-                          <div
-                            className='px-2 flex items-center text-red-600 hover:bg-slate-100 active:bg-slate-200'
-                            onClick={deletePost}
-                          >
-                            <MdDelete className='text-lg' />
-                            <p className='text-sm px-2 py-3 cursor-pointer'>
-                              Delete
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-              </div>
-            </div>
-          )}
-          <div>
-            {(text ||
-              (repliedTo &&
-                repliedTo.userId &&
-                repliedTo.userId.displayName) ||
-              title) && (
-              <div
-                className={`flex flex-col mt-4 mx-4
-                ${
-                  !images || (images && images.length <= 0)
-                    ? 'mb-4'
-                    : height !== '100px'
-                    ? 'mb-4'
-                    : ''
-                }`}
-              >
-                {!showDetails &&
-                  repliedTo &&
-                  repliedTo.userId &&
-                  repliedTo.userId.displayName && (
-                    <p className='text-xs text-slate-500'>
-                      Replying to{' '}
-                      <Link href={`/post/${repliedTo._id}`}>
-                        <span className='font-bold text-blue-600'>
-                          @{repliedTo.userId.displayName}
-                        </span>
-                      </Link>
-                    </p>
-                  )}
+          <div
+            className={`flex flex-col items-stretch flex-1 bg-baseWhite border border-b-0 border-stroke px-4 pt-2 ${
+              focused ? 'rounded-t-lg' : 'rounded-lg'
+            }`}
+          >
+            <SinglePostHeader post={post} focused={focused} />
 
-                <h2 className='text-lg font-bold mb-4 break-all'>
-                  {title}
-                </h2>
-                {text && (
-                  <div
-                    className={`break-all ${styles.description} pb-4`}
-                    dangerouslySetInnerHTML={{
-                      __html: text
-                    }}
-                    ref={contentRef}
-                    style={
-                      showMore
-                        ? { maxHeight: height, overflow: 'hidden' }
-                        : {}
-                    }
-                  />
-                )}
-              </div>
-            )}
-            {preview && (
-              <div className='mb-4'>
-                <LinkDetails
-                  url={preview.url}
-                  description={preview.description}
-                  favicons={preview.favicons}
-                  images={preview.images}
-                  siteName={preview.siteName}
-                  title={preview.title}
-                  youtubeId={preview.youtubeId}
-                  type='detailed'
-                />
-              </div>
-            )}
-            <div
-              className='flex-1'
-              onClick={e => e.stopPropagation()}
-            >
-              <Images
-                images={images}
-                handleSelectedImages={handleSelectedImages}
-              />
-            </div>
+            <div className='flex flex-col gap-4'>
+              {focused && (
+                <Translator onLanguageChange={translatePost} />
+              )}
 
-            <Buttons totalComments={totalComments} postId={_id} />
-          </div>
-          {canReply && (
-            <div
-              className={`mx-4 pb-4 ${
-                hasCircle || hasLine
-                  ? 'max-w-[36rem]'
-                  : 'max-w-[38rem]'
-              }`}
-            >
-              {selectedAccount ? (
-                <CreateReply
-                  postId={_id}
-                  handleReplySuccessCallback={
-                    handleReplySuccessCallback
-                  }
-                />
-              ) : (
-                <p className='text-md'>
-                  Please{' '}
-                  <span
-                    className='text-blue-600 underline cursor-pointer'
-                    onClick={e => {
-                      e.stopPropagation()
-                      openLoginModal()
-                    }}
+              {/* Content */}
+              {isPreview && preview ? (
+                <div className='flex flex-col gap-4 px-1 my-4'>
+                  {/* Preview title */}
+                  <Typography
+                    type='h1'
+                    className='!text-base sm:!text-2xl !leading-[1.6rem] sm:!leading-[2.4rem] font-medium text-primary'
                   >
-                    log in
-                  </span>{' '}
-                  to join the conversation
-                </p>
+                    {translatedText?.preTitle || preview.title}
+                  </Typography>
+
+                  {/* Preview image */}
+                  {!preview.youtubeId && preview.image && (
+                    <CustomImage
+                      width={500}
+                      height={500}
+                      src={preview.image}
+                      alt={preview.title || ''}
+                      className='w-full h-[18.4375rem] rounded-lg object-cover object-center'
+                      fallbackClassName='w-full h-[18.4375rem] rounded-lg bg-cover bg-center'
+                    />
+                  )}
+
+                  {/* Preview description */}
+                  <Typography
+                    type='body'
+                    className='!text-sm sm:!text-base !leading-[1.4rem] sm:!leading-[1.6rem] font-normal text-body'
+                  >
+                    {translatedText?.preDescription ||
+                      preview.description}
+                  </Typography>
+
+                  {/* Read More */}
+                  <Link
+                    href={preview.url}
+                    target='_blank'
+                    className={`no-underline flex flex-row gap-2 items-center bg-baseWhite border border-stroke rounded-lg self-start ${
+                      preview.youtubeId ? 'px-4 py-2' : 'p-2'
+                    }`}
+                  >
+                    {!preview.youtubeId && (
+                      <Typography
+                        type='body'
+                        className='hidden sm:block !text-xs sm:!text-base !leading-[1.6rem] font-medium text-header shrink-0'
+                      >
+                        Read More...
+                      </Typography>
+                    )}
+
+                    <div
+                      style={{
+                        backgroundImage: `url("${preview.favicon}")`
+                      }}
+                      className='h-4 w-4 shrink-0 sm:w-6 sm:h-6 rounded-[0.25rem] bg-no-repeat bg-cover bg-center bg-black'
+                    />
+
+                    <Typography
+                      type='link'
+                      className='!text-xs sm:!text-base !leading-[1.4rem] tracking-medium underline text-mainLink text-ellipsis'
+                    >
+                      {preview.youtubeId
+                        ? preview.url
+                        : new URL(preview.url).origin}
+                    </Typography>
+                  </Link>
+
+                  {/* Youtube frame */}
+                  {preview.youtubeId && (
+                    <LinkPreview
+                      youtubeId={preview.youtubeId}
+                      type='youtube'
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className='flex flex-col gap-4 px-1 my-4'>
+                  <Typography
+                    type='h1'
+                    className='!text-base sm:!text-2xl !leading-[1.6rem] sm:!leading-[2.4rem] font-medium text-header'
+                  >
+                    {translatedText?.title || title}
+                  </Typography>
+
+                  <div
+                    className={styles.SinglePost}
+                    dangerouslySetInnerHTML={{
+                      __html: htmlText || ''
+                    }}
+                  />
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Buttons section */}
+        {focused && <Buttons post={post} commentors={commentors} />}
       </div>
+
+      {focused && <ReplyEditor postId={postId} />}
     </div>
   )
 }

@@ -1,0 +1,21 @@
+@keyframes bg-animation {
+  0% {
+    background-image: url(../../../assets/landing/experience-gradient-1.webp);
+  }
+  33% {
+    background-image: url(../../../assets/landing/experience-gradient-2.webp);
+  }
+  66% {
+    background-image: url(../../../assets/landing/experience-gradient-3.webp);
+  }
+  100% {
+    background-image: url(../../../assets/landing/experience-gradient-1.webp);
+  }
+}
+
+.gradient {
+  animation: bg-animation 2400ms infinite ease-in;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}

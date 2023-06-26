@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import Modal from 'components/Modal'
+import Modal from 'components/core/Modal'
 import Image from 'next/image'
+import React, { useCallback, useEffect, useState } from 'react'
 import { getTypeMedia } from 'utils'
 
 interface ShowImagesModalProps {
@@ -16,11 +16,26 @@ function ShowImagesModal({
   images,
   initialIndex
 }: ShowImagesModalProps) {
+  const [allImages, setAllImages] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
 
+  const handleImageError = (index: number) => {
+    if (!allImages) return
+    const tempImages = [...allImages]
+    tempImages[
+      index
+    ] = `https://dummyimage.com/900x700/53389e/ffffff&text=${encodeURIComponent(
+      'Image not found'
+    )}`
+    setAllImages(tempImages)
+  }
+
   useEffect(() => {
-    if (showImagesVisible) setSelectedIndex(initialIndex)
-  }, [showImagesVisible, initialIndex])
+    if (showImagesVisible) {
+      setAllImages(images)
+      setSelectedIndex(initialIndex)
+    }
+  }, [showImagesVisible, initialIndex, images])
 
   const goBack = useCallback(() => {
     if (selectedIndex <= 0) return
@@ -54,12 +69,11 @@ function ShowImagesModal({
   return (
     <Modal
       isVisible={showImagesVisible}
-      toggleVisible={toggleShowImagesVisible}
-      hasCloseButton
-      whiteCloseButton
+      onClose={toggleShowImagesVisible}
+      showCloseButton
     >
-      <div className='w-screen h-screen  rounded-lg flex flex-row'>
-        <div className='w-12 bg-[rgba(0,0,0,0.4)] flex items-center justify-center'>
+      <div className='w-screen h-screen overflow-y-scroll rounded-lg flex flex-row'>
+        <div className='w-12 flex items-center justify-center'>
           <div
             className={`${
               selectedIndex === 0 ? 'hidden' : 'flex'
@@ -73,29 +87,45 @@ function ShowImagesModal({
           <div className='absolute bottom-0 w-full z-[1]'>
             <div className='flex items-center justify-center p-4 z-[1]'>
               <p className='text-white bg-[rgba(0,0,0,0.7)] px-4 py-2 rounded-lg font-semibold'>
-                {selectedIndex + 1} / {images.length}
+                {selectedIndex + 1} / {allImages.length}
               </p>
             </div>
           </div>
-          {images && getTypeMedia(images[selectedIndex]) === 'image' ? (
-            <Image
-              src={images[selectedIndex]}
-              fill
-              className='object-contain'
-              alt='show image'
-            />
-          ) : getTypeMedia(images[selectedIndex]) === 'video' 
-          ?  <video style={{width : 'fit-content', height:'fit-content'}} controls>
-              <source src={images[selectedIndex]} />
-            </video> 
-          :(
-            <React.Fragment />
+          {allImages && allImages.length ? (
+            getTypeMedia(allImages[selectedIndex]) === 'image' ||
+            allImages[selectedIndex].includes(
+              'Image%20not%20found'
+            ) ? (
+              <Image
+                src={allImages[selectedIndex]}
+                fill
+                className='object-contain'
+                alt='show image'
+                onError={() => handleImageError(selectedIndex)}
+              />
+            ) : getTypeMedia(allImages[selectedIndex]) === 'video' ? (
+              <video
+                style={{
+                  width: 'fit-content',
+                  height: 'fit-content'
+                }}
+                controls
+              >
+                <source src={allImages[selectedIndex]} />
+              </video>
+            ) : (
+              <React.Fragment />
+            )
+          ) : (
+            ''
           )}
         </div>
-        <div className='w-12 bg-[rgba(0,0,0,0.4)] flex items-center justify-center'>
+        <div className='w-12 flex items-center justify-center'>
           <div
             className={`${
-              selectedIndex === images.length - 1 ? 'hidden' : 'flex'
+              selectedIndex === allImages.length - 1
+                ? 'hidden'
+                : 'flex'
             } cursor-pointer rounded-full bg-black flex-row items-center justify-center w-8 h-8`}
             onClick={goForward}
           >

@@ -1,0 +1,11 @@
+.main_title {
+  background: linear-gradient(
+    136.64deg,
+    #112339 -28.47%,
+    #4c596a 69.56%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
