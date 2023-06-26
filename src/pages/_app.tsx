@@ -1,33 +1,83 @@
-import React, { useEffect } from 'react'
 import type { AppProps } from 'next/app'
-import { QueryClient, QueryClientProvider } from 'react-query'
+import Head from 'next/head'
+import React, { useRef } from 'react'
+import {
+  Hydrate,
+  QueryClient,
+  QueryClientProvider
+} from 'react-query'
 import { ReactQueryDevtools } from 'react-query/devtools'
 import { Provider } from 'react-redux'
-import { store, persistor } from 'store'
-import { PersistGate } from 'redux-persist/integration/react'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-
-import Header from 'components/Header'
+import { store } from 'store'
+import { Inter } from '@next/font/google'
+import Wrapper from 'components/Wrapper'
+import ProgressBar from 'nextjs-progressbar'
 import 'styles/globals.css'
-import Head from 'next/head'
-import io from 'lib/ioConfig'
+import { SocketProvider } from 'context/SocketContext'
 
-const queryClient = new QueryClient()
+const inter = Inter({ subsets: ['latin'] })
 
 export default function App({ Component, pageProps }: AppProps) {
   const { metaTags } = pageProps
-
-  useEffect(() => {
-    io.connect()
-    return () => {
-      io.disconnectSocket()
-    }
-  }, [])
+  const queryClient = useRef(
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          refetchOnMount: false,
+          refetchOnReconnect: false,
+          refetchOnWindowFocus: false
+        }
+      }
+    })
+  )
 
   return (
     <React.Fragment>
+      <style jsx global>{`
+        html {
+          font-family: ${inter.style.fontFamily};
+        }
+      `}</style>
       <Head>
+        <link rel='preconnect' href='https://fonts.googleapis.com' />
+        <link
+          rel='preconnect'
+          href='https://fonts.gstatic.com'
+          crossOrigin='anonymous'
+        />
+
+        <link
+          rel='icon'
+          type='image/png'
+          href='/favicon-32x32.png'
+          sizes='32x32'
+        />
+        <link
+          rel='icon'
+          type='image/png'
+          href='/favicon-16x16.png'
+          sizes='16x16'
+        />
+        <link rel='icon' type='image/x-icon' href='/favicon.ico' />
+        <link rel='apple-touch-icon' href='/apple-touch-icon.png' />
+        <link
+          rel='icon'
+          type='image/png'
+          sizes='192x192'
+          href='/android-chrome-192x192.png'
+        />
+        <link
+          rel='icon'
+          type='image/png'
+          sizes='512x512'
+          href='/android-chrome-512x512.png'
+        />
+        <link rel='manifest' href='/site.webmanifest' />
+
+        <meta name='theme-color' content='#ffffff' />
+
         <meta
           name='viewport'
           content='width=device-width, initial-scale=1'
@@ -45,22 +95,25 @@ export default function App({ Component, pageProps }: AppProps) {
               />
             )
           })}
-        <meta property='og:image:width' content='1200' />
-        <meta property='og:image:height' content='630' />
       </Head>
-
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <QueryClientProvider client={queryClient}>
-            <Header />
-            <div className='mt-[3.5rem]'>
-              <Component {...pageProps} />
-            </div>
-            <ToastContainer />
-            <ReactQueryDevtools initialIsOpen={false} />
+      <SocketProvider>
+        <Provider store={store}>
+          <QueryClientProvider client={queryClient.current}>
+            <Wrapper>
+              <Hydrate state={pageProps.dehydratedState}>
+                <ProgressBar
+                  options={{
+                    showSpinner: false
+                  }}
+                />
+                <Component {...pageProps} />
+                <ToastContainer />
+                <ReactQueryDevtools initialIsOpen={false} />
+              </Hydrate>
+            </Wrapper>
           </QueryClientProvider>
-        </PersistGate>
-      </Provider>
+        </Provider>
+      </SocketProvider>
     </React.Fragment>
   )
 }

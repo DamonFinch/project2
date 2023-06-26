@@ -1,3 +1,8 @@
+interface IInvites {
+  allowedLimit: number
+  invited: number
+}
+
 export interface IUser {
   _id: string
   username: string
@@ -6,6 +11,21 @@ export interface IUser {
   reputation: number
   parent?: IUser | string
   avatar?: string
+  verified?: boolean
+  userIdHash?: string
+  useremail?: string
+  invites?: IInvites
+  introductoryPost?: IPost | any
+  language?: string
+  preferedLanguages?: string[]
+  hasNewNotifications?: boolean
+}
+
+export interface IPublicUser {
+  user: IUser
+  totalPosts?: number
+  totalUpvotes?: number
+  totalDownvotes?: number
 }
 
 export interface IPost {
@@ -14,6 +34,13 @@ export interface IPost {
   title?: string
   text?: string
   images?: string[]
+  meta?: {
+    languageCodes?: string[]
+    languages?: string[]
+    tags?: string[]
+    topics?: string[]
+  }
+  bookMarks?: string[]
   createdAt: Date
   upvotes: string[]
   downvotes: string[]
@@ -21,9 +48,9 @@ export interface IPost {
   totalComments?: number
   preview?: {
     url: string
-    favicons?: string[]
+    favicon: string
     siteName?: string
-    images?: string[]
+    image: string
     title?: string
     description?: string
     youtubeId?: string
@@ -32,6 +59,8 @@ export interface IPost {
   replies?: IPost[]
   totalReplies?: Number
   youtubeId?: string | undefined
+  tips?: any
+  type?: string
 }
 
 export interface IComment {
@@ -46,15 +75,24 @@ export interface IComment {
 
 export interface ILinkDetails {
   url: string
-  favicons?: string[]
+  favicon?: string
   siteName?: string
-  images?: string[]
+  image?: string
   title?: string
   description?: string
   youtubeId?: string
+  sourcePost?: IPost
 }
 
 export interface IUploadedStatus {
-  nameArray : string[]
-  sizeArray : number[]
+  nameArray: string[]
+  sizeArray: number[]
+}
+
+export interface ITranslateDataType {
+  preTitle?: string
+  preDescription?: string
+  title?: string
+  text?: string
+  lang?: number
 }

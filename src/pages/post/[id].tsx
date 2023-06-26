@@ -1,148 +1,34 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
 import { GetServerSideProps } from 'next'
-import { useQuery, useQueryClient } from 'react-query'
-
-import { ENV } from 'lib/env'
-import { IPost } from 'types/interfaces'
+import http from 'services/http-common'
 import Layout from 'components/Layouts'
+import { QueryClient, dehydrate } from 'react-query'
+import { IPost, IUser } from 'types/interfaces'
+import { getContentFromText, sanitizeTitle } from 'utils'
+import PostPage from 'components/pages/Post'
+import parse from 'node-html-parser'
 
-import EditPostModal from 'components/pages/home/EditPostModal/EditPostModal'
-import ShowImagesModal from 'components/pages/home/ShowImagesModal'
-import SinglePost from 'components/SinglePost/SinglePost'
-import Replies from 'components/pages/Post/Replies'
-import MinifiedPost from 'components/pages/home/MinifiedPost'
-
-interface PostProps {
-  postId: string
-  postData: IPost | null
+interface Props {
+  id: string
+  latestCommentors: IUser[]
 }
 
-function Post({ postData, postId }: PostProps) {
-  const queryClient = useQueryClient()
-
-  const [selectedPost, setSelectedPost] = useState<IPost | null>(null)
-  const [isReplyEdit, setIsReplyEdit] = useState(false)
-  const [isEditPostModalVisible, setIsEditPostModalVisible] =
-    useState(false)
-  const [showImagesVisible, setShowImagesVisible] = useState(false)
-  const [selectedImages, setSelectedImages] = useState<string[]>([])
-  const [initialImageIndex, setInitialImageIndex] =
-    useState<number>(0)
-
-  const getPostAgain = useQuery(
-    ['getSinglePost', postId],
-    () => {
-      return axios.get(`${ENV.API_URL}/getSinglePost/${postId}`)
-    },
-    {
-      refetchOnWindowFocus: false,
-      cacheTime: Infinity
-    }
-  )
-
-  const post: IPost | null = useMemo(() => {
-    return getPostAgain.data &&
-      getPostAgain.data.data &&
-      getPostAgain.data.data.data
-      ? getPostAgain.data.data.data
-      : postData
-  }, [postData, getPostAgain.data])
-
-  useEffect(() => {}, [])
-
-  useEffect(() => {
-    if (!isEditPostModalVisible) {
-      setSelectedPost(null)
-    }
-  }, [isEditPostModalVisible])
-
-  const handleSelectedPost = (post?: IPost, isReply?: boolean) => {
-    toggleIsReplyEdit(isReply ? true : false)
-    if (!post) return setSelectedPost(null)
-    setSelectedPost(post)
-  }
-
-  const handleSelectedImages = (images: string[], index?: number) => {
-    setSelectedImages(images)
-    setInitialImageIndex(index ? index : 0)
-    toggleShowImagesVisible()
-  }
-
-  const toggleIsReplyEdit = (state: boolean) => setIsReplyEdit(state)
-
-  const toggleEditPostModal = () =>
-    setIsEditPostModalVisible(prev => !prev)
-
-  const toggleShowImagesVisible = () =>
-    setShowImagesVisible(prev => !prev)
-
-  const onReplySuccess = () => {
-    queryClient.invalidateQueries('getSinglePost')
-    queryClient.invalidateQueries('getReplies')
-  }
-
-  if (!post) return <React.Fragment />
-
+export default function Post({ id, latestCommentors }: Props) {
   return (
-    <Layout pageTitle='News Article - Here News' type='base'>
-      <div className='relative w-full max-w-[40rem]'>
-        {post.repliedTo && (
-          <div className='pb-4 bg-white'>
-            <MinifiedPost
-              {...post.repliedTo}
-              noBorder
-              hasSingleLine
-              noInteraction
-              handleSelectedPost={handleSelectedPost}
-              toggleEditPostModal={toggleEditPostModal}
-            />
-          </div>
-        )}
-        <SinglePost
-          noBorder
-          {...post}
-          totalComments={post.replies ? post.replies.length : 0}
-          handleSelectedImages={handleSelectedImages}
-          toggleEditPostModal={toggleEditPostModal}
-          handleSelectedPost={handleSelectedPost}
-          showVoting
-          showDetails
-          hasCircle={!!post.repliedTo}
-          hasLine={
-            post.replies && post.replies.length === 1 ? true : false
-          }
-          canReply
-          handleReplySuccessCallback={onReplySuccess}
-          parentPostId={post.repliedTo && post.repliedTo._id}
-        />
-        <Replies
-          postId={post._id}
-          handleSelectedImages={handleSelectedImages}
-          handleSelectedPost={handleSelectedPost}
-          toggleEditPostModal={toggleEditPostModal}
-        />
-      </div>
-      <EditPostModal
-        isVisible={isEditPostModalVisible}
-        toggleVisible={toggleEditPostModal}
-        post={selectedPost}
-        isSinglePost={true}
-        isReplyEdit={isReplyEdit}
-      />
-      <ShowImagesModal
-        images={selectedImages}
-        initialIndex={initialImageIndex}
-        showImagesVisible={showImagesVisible}
-        toggleShowImagesVisible={toggleShowImagesVisible}
-      />
+    <Layout
+      pageTitle='News Article - Here News'
+      type='home'
+      className='!pt-0'
+    >
+      <PostPage id={id} latestCommentors={latestCommentors} />
     </Layout>
   )
 }
 
-export const getServerSideProps: GetServerSideProps<
-  PostProps
-> = async ({ req, params, resolvedUrl }) => {
+export const getServerSideProps: GetServerSideProps = async ({
+  req,
+  params,
+  resolvedUrl
+}) => {
   if (!params) {
     return {
       notFound: true
@@ -152,29 +38,138 @@ export const getServerSideProps: GetServerSideProps<
   const { id } = params
 
   try {
-    const postData = await axios.get(
-      `${ENV.API_URL}/getSinglePost/${id}`
-    )
+    const queryClient = new QueryClient()
 
-    //creating meta tags
-    const data = postData.data.data
+    const getPostData = async () => {
+      const response = await http.get(`/getSinglePost/${id}`)
+
+      return {
+        data: response.data.data as IPost
+      }
+    }
+
+    const getPostReplies = async () => {
+      const response = await http.get(`/getPostReplies/${id}`)
+
+      return {
+        data: response.data.data
+      }
+    }
+
+    await queryClient.prefetchQuery({
+      queryKey: ['getSinglePost', `getSinglePost/${id}`],
+      queryFn: getPostData
+    })
+
+    await queryClient.prefetchQuery({
+      queryKey: `getReplies/${id}`,
+      queryFn: getPostReplies
+    })
+
+    /**
+     * Getting the list of latest commentors
+     */
+    const repliesCache = queryClient.getQueryData(`getReplies/${id}`)
+
+    const latestCommentors = new Map<string, IUser>()
+    const replies = (repliesCache as any).data as IPost[]
+
+    const users = replies.map(reply => reply.userId)
+
+    for (let user of users) {
+      if (latestCommentors.size > 4) {
+        break
+      }
+
+      latestCommentors.set(user._id, user)
+    }
+
+    /**
+     * Creating post meta tags
+     */
+    const cache = queryClient.getQueryData([
+      'getSinglePost',
+      `getSinglePost/${id}`
+    ])
+    const data: IPost = (cache as any).data
+
+    if (!data) {
+      return {
+        notFound: true
+      }
+    }
+
     const htmlToFormattedText = require('html-to-formatted-text')
-    const description = htmlToFormattedText(postData.data.data.text)
-    const imageUrl =
-      data.images && data.images.length > 0 ? data.images[0] : ''
+
+    let title = data.title
+    let content = getContentFromText(data.text)
+
+    // if still empty, then use content
+    if (!title || title.trim().length === 0) {
+      title = sanitizeTitle(htmlToFormattedText(data.text))
+      content = ''
+    }
+
+    const testTitle = sanitizeTitle(title || '')
+
+    // If title is still empty or undefined
+    if (
+      (!testTitle || testTitle.trim().length === 0) &&
+      data.preview
+    ) {
+      title = data.preview.title
+      content = data.preview.description
+    }
+
+    let imageUrl: string | undefined = undefined
+
+    // if no image found, then try getting one from the embedded images
+    if (!imageUrl && data.text) {
+      const doc = parse(data.text)
+      const tag = doc.querySelector('div[data-file], img')
+
+      if (tag?.rawTagName === 'img' || tag?.tagName === 'img') {
+        imageUrl = tag.getAttribute('src')
+      } else if (
+        tag?.rawTagName === 'div' ||
+        tag?.tagName === 'div'
+      ) {
+        imageUrl = tag.getAttribute('data-url')
+      }
+    }
+
+    if (!imageUrl && data.preview?.image) {
+      imageUrl = data.preview?.image
+    }
+
+    // If still no image, then use the site logo
+    if (!imageUrl) {
+      const logo = await import('assets/logo.png')
+      imageUrl = `https://${req.headers.host}${logo.default.src}`
+    }
+
+    title =
+      title && title.length > 104
+        ? title.slice(0, 104) + '...'
+        : title
+
     const metaTags = data
       ? {
-          'og:title': `${data.title} - Here News`,
-          'og:description': `${description}`,
+          'og:title': `${title ? `${title} - ` : ''}Here News`,
+          'og:description': `${content}`,
           'og:image': imageUrl,
           'og:url': `${req.headers.host}${resolvedUrl}`
         }
       : {}
+
     return {
       props: {
-        postId: id && !Array.isArray(id) ? id : '',
-        postData: postData.data.data,
-        metaTags
+        id,
+        metaTags,
+        latestCommentors: Array.from(latestCommentors.values()),
+        dehydratedState: JSON.parse(
+          JSON.stringify(dehydrate(queryClient))
+        )
       }
     }
   } catch (error) {
@@ -183,5 +178,3 @@ export const getServerSideProps: GetServerSideProps<
     }
   }
 }
-
-export default Post

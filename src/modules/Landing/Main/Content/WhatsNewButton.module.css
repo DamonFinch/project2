@@ -1,0 +1,8 @@
+.button_whats_here {
+  background: #1c1f26;
+}
+.button_whats_here_inner {
+  cursor: pointer;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.069);
+}
